@@ -81,7 +81,7 @@ for /D %%i in ("%~dpnx1\*") do (
 						if not exist "%~dpnx2\!file!" (
 							::echo new DML file - writing DML1 header
 							echo DML1> "%~dpnx2\!file!"
-							echo 	-- Writing DML Header to new file "!file!"
+							echo 	-- Writing DML Header to new file !file!
 						)
 					)
 				)
@@ -90,14 +90,14 @@ for /D %%i in ("%~dpnx1\*") do (
 				if exist "%~dpnx2\!file!" (
 					echo: >> "%~dpnx2\!file!"
 					echo: >> "%~dpnx2\!file!"
-					echo 	-- Appending to file "!file!" !dml!
+					echo 	-- Appending to file !file! !dml!
 				) else (
-					echo 	-- Writing new file "!file!" !dml!
+					echo 	-- Writing new file !file! !dml!
 				)
 				
 				type "%%i\!file!" >> "%~dpnx2\!file!"
 			) else (
-				echo 	-- Skipping file "!file!"
+				echo 	-- Skipping file !file!
 			)
 		)
 	)
@@ -133,7 +133,7 @@ for /D %%i in ("%~dpnx1\*") do (
 	) else (		
 		if NOT %%~ni == $common (
 		
-			echo Creating Version "%%~ni"
+			echo Creating Version %%~ni
 		
 			::create version dir
 			md "%~dpnx2\%%~ni" 2>NUL
@@ -159,15 +159,15 @@ for /D %%i in ("%~dpnx1\*") do (
 					if exist "%~dpnx2\%%~ni\!file!" (
 						echo: >> "%~dpnx2\%%~ni\!file!"
 						echo: >> "%~dpnx2\%%~ni\!file!"
-						echo 	-- Appending to file "!file!" !dml!
+						echo 	-- Appending to file !file! !dml!
 					) else (
-						echo 	-- Writing new file "!file!" !dml!
+						echo 	-- Writing new file !file! !dml!
 					)
 					
 					type "%%i\!file!" >> "%~dpnx2\%%~ni\!file!"
 				
 				) else (
-					echo 	-- Skipping file "!file!"
+					echo 	-- Skipping file !file!
 				)
 			)
 		)
