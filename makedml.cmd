@@ -37,6 +37,12 @@ if "%1" == "-f" (
 EXIT /B
 
 ::FUNCTIONS
+:make_out_dir
+::recreate output directory
+::echo %~dpnx1
+rmdir /s /q "%~dpnx1" 2>NUL
+mkdir "%~dpnx1"
+EXIT /B 0
 
 :make_features
 ::MAKE FEATURES
@@ -49,10 +55,8 @@ EXIT /B
 :: 3. Fix DML headers (ensure one is at the top of each dml file) if DML header generation is enabled
 set back=%cd%
 
-::recreate output directory
-::echo %~dpnx2
-rmdir /s /q "%~dpnx2"
-mkdir "%~dpnx2"
+::remake output dir
+call :make_out_dir %2
 
 ::for each feature folder, copy each file to the dest folder, appending if required
 setlocal enableDelayedExpansion
@@ -110,10 +114,8 @@ EXIT /B 0
 :: 3. Write all the files from each src to it's destination folder, appending each time (not overwriting)
 set back=%cd%
 
-::recreate output directory
-::echo %~dpnx2
-rmdir /s /q "%~dpnx2"
-mkdir "%~dpnx2"
+::remake output dir
+call :make_out_dir %2
 
 ::for each version folder, copy over the $common folder first, and then copy across that versions files
 setlocal enableDelayedExpansion
