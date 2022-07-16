@@ -2,14 +2,14 @@
 ::IT WILL BREAK THE SCRIPT!
 
 ::Files starting with # will not be copied to your output dir
-::Use this to write development notes or have files that you don't want included
+::Use this to write development notes or have files that you don't want included in a release
 
 @echo off
 
 ::Set third parameter to 1 to enable DML1 header generation
 ::This is useful if you're not using a $common folder, so DML files can be written in any order.
-call :make_features "%~dp0..\src" "%~dp0..\out" 0
-::call :make_versions "%~dp0..\src" "%~dp0..\out"
+call :make_features %1 %2 %3
+::call :make_versions %1 %2
 
 EXIT /B
 
@@ -17,11 +17,13 @@ EXIT /B
 
 :make_features
 ::MAKE FEATURES
-::Designed for when you have a complicated mod with many features, will combine them
-::into a set of dml files
+::Designed for when you have a complicated mod with many features
+::Simply place each feature into it's own folder, it becomes it's own foldeer structure
+::Each feature folder will be combined in the output folder into a single folder structure,
+::with overlapping files being combined.
 :: 1. Iterate through each feature folder
 :: 2. Write all the files from each to the destination, appending each time (not overwriting)
-:: 3. Fix DML headers (ensure one is at the top of each dml file)
+:: 3. Fix DML headers (ensure one is at the top of each dml file) if DML header generation is enabled
 set back=%cd%
 
 ::recreate output directory
@@ -73,6 +75,9 @@ EXIT /B 0
 ::MAKE VERSIONS
 ::Designed for when you have a mod with a common codebase
 ::but should generate multiple versions which should all be slightly different
+::Versioning allows you to create a $common folder, the contents of which will appear in all versions
+::then you can put only the differences in each folder, and it will generate
+::a complete package for each version
 :: 1. Create a copy of each src folder in the destination
 :: 2. Write the files from the _common folder to each folder
 :: 3. Write all the files from each src to it's destination folder, appending each time (not overwriting)
@@ -83,19 +88,19 @@ set back=%cd%
 rmdir /s /q "%~dpnx2"
 mkdir "%~dpnx2"
 
-::for each version folder, process the common folder and then copy across it's files
+::for each version folder, copy over the $common folder first, and then copy across that versions files
 for /D %%i in ("%~dpnx1\*") do (
 	echo %%i
 	echo %%~ni
 	
-	if NOT %%~ni == _common (
+	if NOT %%~ni == $common (
 	
 		::create version dir
 		md "%~dpnx2\%%~ni" 2>NUL
 		
-		::copy over _common stuff
-		if exist "%~dpnx1\_common" (
-			xcopy /Q /E /I "%~dpnx1\_common" "%~dpnx2\%%~ni"
+		::copy over $common stuff
+		if exist "%~dpnx1\$common" (
+			xcopy /Q /E /I "%~dpnx1\$common" "%~dpnx2\%%~ni"
 		)
 		
 		::This is some hacked together magic
