@@ -55,20 +55,17 @@ rmdir /s /q "%~dpnx2"
 mkdir "%~dpnx2"
 
 ::for each feature folder, copy each file to the dest folder, appending if required
+setlocal enableDelayedExpansion
 for /D %%i in ("%~dpnx1\*") do (
-
-	setlocal enableDelayedExpansion
 	set "folder_name=%%~nxi"
 	if "!folder_name:~0,1!" == "#" (
 		echo skipping ignored feature !folder_name!
 	) else (
 		echo adding feature !folder_name!
 		::This is some hacked together magic
-		setlocal disableDelayedExpansion
 		for /f "delims=" %%A in ('forfiles /P "%%i" /s /m *.* /c "cmd /c echo @relpath"') do (
 			set "file=%%~A"
 			set "ext=%%~xA"
-			setlocal enableDelayedExpansion
 			set "file=!file:~2!"
 			
 			set first_character=!file:~0,1!
@@ -92,11 +89,10 @@ for /D %%i in ("%~dpnx1\*") do (
 				
 				type "%%i\!file!" >> "%~dpnx2\!file!"
 			)
-			endlocal
-		)	
+		)
 	)
-	endlocal
 )
+endlocal
 
 cd %back%
 EXIT /B 0
@@ -120,9 +116,9 @@ rmdir /s /q "%~dpnx2"
 mkdir "%~dpnx2"
 
 ::for each version folder, copy over the $common folder first, and then copy across that versions files
+setlocal enableDelayedExpansion
 for /D %%i in ("%~dpnx1\*") do (
 	
-	setlocal enableDelayedExpansion
 	set "folder_name=%%~nxi"
 	if "!folder_name:~0,1!" == "#" (
 		echo skipping version !folder_name!
@@ -141,11 +137,9 @@ for /D %%i in ("%~dpnx1\*") do (
 			)
 			
 			::This is some hacked together magic
-			setlocal disableDelayedExpansion
 			for /f "delims=" %%A in ('forfiles /P "%%i" /s /m *.* /c "cmd /c echo @relpath"') do (
 				set "file=%%~A"
 				set "ext=%%~xA"
-				setlocal enableDelayedExpansion
 				set "file=!file:~2!"
 						
 				echo Writing file "%~dpnx2\%%~ni\!file!"
@@ -158,12 +152,11 @@ for /D %%i in ("%~dpnx1\*") do (
 				)
 				
 				type "%%i\!file!" >> "%~dpnx2\%%~ni\!file!"
-				endlocal
 			)
 		)
 	)
-	endlocal
 )
+endlocal
 
 cd %back%
 EXIT /B 0
