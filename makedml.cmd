@@ -42,6 +42,7 @@ EXIT /B
 ::echo %~dpnx1
 rmdir /s /q "%~dpnx1" 2>NUL
 mkdir "%~dpnx1"
+echo Outputting to %~dpnx1
 EXIT /B 0
 
 :make_features
@@ -63,9 +64,9 @@ setlocal enableDelayedExpansion
 for /D %%i in ("%~dpnx1\*") do (
 	set "folder_name=%%~nxi"
 	if "!folder_name:~0,1!" == "#" (
-		echo skipping ignored feature !folder_name!
+		echo Skipping ignored feature !folder_name!
 	) else (
-		echo adding feature !folder_name!
+		echo Including feature !folder_name!
 		::This is some hacked together magic
 		for /f "delims=" %%A in ('forfiles /P "%%i" /s /m *.* /c "cmd /c echo @relpath"') do (
 			set "file=%%~A"
@@ -75,12 +76,12 @@ for /D %%i in ("%~dpnx1\*") do (
 			set first_character=!file:~0,1!
 			if NOT "!first_character!" == "#" (
 					
-				echo Writing file "%~dpnx2\!file!"		
 				if "%3" == "1" (
 					if !ext! == .dml (
 						if not exist "%~dpnx2\!file!" (
-							echo new DML file - writing DML1 header
+							::echo new DML file - writing DML1 header
 							echo DML1> "%~dpnx2\!file!"
+							echo 	-- Writing DML Header to new file "!file!"
 						)
 					)
 				)
@@ -89,9 +90,14 @@ for /D %%i in ("%~dpnx1\*") do (
 				if exist "%~dpnx2\!file!" (
 					echo: >> "%~dpnx2\!file!"
 					echo: >> "%~dpnx2\!file!"
+					echo 	-- Appending to file "!file!" !dml!
+				) else (
+					echo 	-- Writing new file "!file!" !dml!
 				)
 				
 				type "%%i\!file!" >> "%~dpnx2\!file!"
+			) else (
+				echo 	-- Skipping file "!file!"
 			)
 		)
 	)
@@ -123,7 +129,7 @@ for /D %%i in ("%~dpnx1\*") do (
 	
 	set "folder_name=%%~nxi"
 	if "!folder_name:~0,1!" == "#" (
-		echo skipping version !folder_name!
+		echo Skipping version !folder_name!
 	) else (		
 		if NOT %%~ni == $common (
 		
@@ -134,8 +140,9 @@ for /D %%i in ("%~dpnx1\*") do (
 			
 			::copy over $common stuff
 			if exist "%~dpnx1\$common" (
-				echo Copying files from $common into new version %%~ni
-				xcopy /V /E /I "%~dpnx1\$common" "%~dpnx2\%%~ni" >NUL
+				echo 	-- Copying files from $common into new version folder
+				::xcopy /V /E /I "%~dpnx1\$common" "%~dpnx2\%%~ni" >NUL
+				robocopy "%~dpnx1\$common" "%~dpnx2\%%~ni" /E /XF "#*" /XF "#*" /XD "#*" >NUL
 			)
 			
 			::This is some hacked together magic
@@ -143,17 +150,25 @@ for /D %%i in ("%~dpnx1\*") do (
 				set "file=%%~A"
 				set "ext=%%~xA"
 				set "file=!file:~2!"
-						
-				echo Writing file "%~dpnx2\%%~ni\!file!"
+				
+				set first_character=!file:~0,1!
+				if NOT "!first_character!" == "#" (
+										
+					md "%~dpnx2\%%~ni\!file!\.." 2>NUL
 					
-				md "%~dpnx2\%%~ni\!file!\.." 2>NUL
+					if exist "%~dpnx2\%%~ni\!file!" (
+						echo: >> "%~dpnx2\%%~ni\!file!"
+						echo: >> "%~dpnx2\%%~ni\!file!"
+						echo 	-- Appending to file "!file!" !dml!
+					) else (
+						echo 	-- Writing new file "!file!" !dml!
+					)
+					
+					type "%%i\!file!" >> "%~dpnx2\%%~ni\!file!"
 				
-				if exist "%~dpnx2\%%~ni\!file!" (
-					echo: >> "%~dpnx2\%%~ni\!file!"
-					echo: >> "%~dpnx2\%%~ni\!file!"
+				) else (
+					echo 	-- Skipping file "!file!"
 				)
-				
-				type "%%i\!file!" >> "%~dpnx2\%%~ni\!file!"
 			)
 		)
 	)
