@@ -9,7 +9,7 @@
 ::Set third parameter to 1 to enable DML1 header generation
 ::This is useful if you're not using a $common folder, so DML files can be written in any order.
 if "%1" == "-f" (
-	call :make_features %2 %3 %4
+	call :make_features %2 %3 %4 %5 %6 %7 %8 %9
 ) else if "%1" == "-v" (
 	call :make_versions %2 %3
 ) else (
@@ -17,26 +17,70 @@ if "%1" == "-f" (
 	echo:
 	echo usage:
 	echo for feature mode
-	echo 	makedml.cmd -f $source_dir $destination_dir $make_DML_headers
+	echo 	%~nx0 -f $source_dir $destination_dir [$headers1] [$headers2] [$headers3] [$headers4]...
 	echo or for version mode
-	echo 	makedml.cmd -v $source_dir $destination_dir
+	echo 	%~nx0 -v $source_dir $destination_dir
 	echo:
-	echo In feature mode, the structure of each subfolder of $source_dir will be copied into $destination_dir in sequence.
+	echo Feature Mode:
+	echo The structure of each subfolder of $source_dir will be copied into $destination_dir in sequence.
 	echo Files that exist in multiple folders will be concatenated together with a new line.
-	echo Setting the $make_DML_headers variable to 1 will add "DML1" to the first line of every .dml file found.
-	echo This is because the DML header must appear at the top of all DML files, but feature folders can be in any order.
-	echo If you wish to specify your own DML headers, they should be in
-	echo a folder that appears at the TOP of your src folder, it's recommended to use $core or something similar.
-	echo In that instance, the $make_DML_headers variable should be 0 or not specified.
-	echo:
-	echo In version mode, for each subfolder of $source_dir, the contents of $common will be copied into a new subfolder in $destination_dir.
+	echo After this, add an optional list of dml headers to add, based on folder name.
+	echo Adding headers will also add the DML1 header automatically
+	echo See the "headers" folder for examples
+	echo.
+	echo Version Mode:
+	echo For each subfolder of $source_dir, the contents of $common will be copied into a new subfolder in $destination_dir.
 	echo Then, the contents of the subfolder in $source_dir will be added to the equivalent subfolder in $destination_dir.
 	echo Files that exist in both folders will be concatenated together with a new line.
+	echo.
+	echo Usage example: Build DML files in feature mode with DML1 headers, as well as SCP and Vanilla fingerprints:
+	echo 	%~nx0 -f "<project>\src" "<project>\out" "vanilla" "scp"
+	pause
 )
 
 EXIT /B
 
 ::FUNCTIONS
+
+:populate_header
+
+::Do not include headers for gamesys.dml, since
+::usually it's automaticlaly applied to a gamesys
+if "%~nx1" == "gamesys.dml" (
+	EXIT /B 0
+)
+
+if exist "%~dp0headers\%~2\$common.dml" (
+	type "%~dp0headers\%~2\$common.dml" >> "%~1"
+	echo.>> "%~1"
+	echo.>> "%~1"
+)
+if exist "%~dp0headers\%~2\%~nx1" (
+	type "%~dp0headers\%~2\%~nx1" >> "%~1"
+	echo.>> "%~1"
+	echo.>> "%~1"
+)
+EXIT /B 0
+
+:populate_headers
+::Create DML1 headers
+if not exist "%~1" (
+	::echo new DML file - writing DML1 header
+	echo 	-- Writing DML Header to new file %~1
+	if NOT "%~2%~3%~4%~5%~6%~7%~8" == "" (
+		echo DML1> "%~1"
+		echo.>> "%~1"
+	)
+	call :populate_header %1 %2
+	call :populate_header %1 %3
+	call :populate_header %1 %4
+	call :populate_header %1 %5
+	call :populate_header %1 %6
+	call :populate_header %1 %7
+	call :populate_header %1 %8
+)
+EXIT /B 0
+
 :make_out_dir
 ::recreate output directory
 ::echo %~dpnx1
@@ -75,21 +119,12 @@ for /D %%i in ("%~dpnx1\*") do (
 			
 			set first_character=!file:~0,1!
 			if NOT "!first_character!" == "#" (
-					
-				if "%3" == "1" (
-					if !ext! == .dml (
-						if not exist "%~dpnx2\!file!" (
-							::echo new DML file - writing DML1 header
-							echo DML1> "%~dpnx2\!file!"
-							echo 	-- Writing DML Header to new file !file!
-						)
-					)
+				if !ext! == .dml (
+					call :populate_headers "%~dpnx2\!file!" "%~3" "%~4" "%~5" "%~6" "%~7" "%~8" "%~9"
 				)
 				md "%~dpnx2\!file!\.." 2>NUL
 				
 				if exist "%~dpnx2\!file!" (
-					echo: >> "%~dpnx2\!file!"
-					echo: >> "%~dpnx2\!file!"
 					echo 	-- Appending to file !file! !dml!
 				) else (
 					echo 	-- Writing new file !file! !dml!
@@ -153,12 +188,9 @@ for /D %%i in ("%~dpnx1\*") do (
 				
 				set first_character=!file:~0,1!
 				if NOT "!first_character!" == "#" (
-										
 					md "%~dpnx2\%%~ni\!file!\.." 2>NUL
 					
 					if exist "%~dpnx2\%%~ni\!file!" (
-						echo: >> "%~dpnx2\%%~ni\!file!"
-						echo: >> "%~dpnx2\%%~ni\!file!"
 						echo 	-- Appending to file !file! !dml!
 					) else (
 						echo 	-- Writing new file !file! !dml!

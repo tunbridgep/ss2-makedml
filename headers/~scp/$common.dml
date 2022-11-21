@@ -1,0 +1,5 @@
+//Do not load for SCP
+!FINGERPRINT
+{
+   QVAR "scplevel" == 1
+}
