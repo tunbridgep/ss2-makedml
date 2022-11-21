@@ -51,14 +51,14 @@ if "%~nx1" == "gamesys.dml" (
 )
 
 if exist "%~dp0headers\%~2\$common.dml" (
+	echo.>> "%~1"
+	echo.>> "%~1"
 	type "%~dp0headers\%~2\$common.dml" >> "%~1"
-	echo.>> "%~1"
-	echo.>> "%~1"
 )
 if exist "%~dp0headers\%~2\%~nx1" (
+	echo.>> "%~1"
+	echo.>> "%~1"
 	type "%~dp0headers\%~2\%~nx1" >> "%~1"
-	echo.>> "%~1"
-	echo.>> "%~1"
 )
 EXIT /B 0
 
@@ -68,8 +68,7 @@ if not exist "%~1" (
 	::echo new DML file - writing DML1 header
 	echo 	-- Writing DML Header to new file %~1
 	if NOT "%~2%~3%~4%~5%~6%~7%~8" == "" (
-		echo DML1> "%~1"
-		echo.>> "%~1"
+		echo|set /p="DML1"> "%~1"
 	)
 	call :populate_header %1 %2
 	call :populate_header %1 %3
@@ -126,6 +125,8 @@ for /D %%i in ("%~dpnx1\*") do (
 				
 				if exist "%~dpnx2\!file!" (
 					echo 	-- Appending to file !file! !dml!
+					echo.>> "%~dpnx2\!file!"
+					echo.>> "%~dpnx2\!file!"
 				) else (
 					echo 	-- Writing new file !file! !dml!
 				)
@@ -192,12 +193,13 @@ for /D %%i in ("%~dpnx1\*") do (
 					
 					if exist "%~dpnx2\%%~ni\!file!" (
 						echo 	-- Appending to file !file! !dml!
+						echo.>> "%~dpnx2\!file!"
+						echo.>> "%~dpnx2\!file!"
 					) else (
 						echo 	-- Writing new file !file! !dml!
 					)
 					
 					type "%%i\!file!" >> "%~dpnx2\%%~ni\!file!"
-				
 				) else (
 					echo 	-- Skipping file !file!
 				)
