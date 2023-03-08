@@ -4,7 +4,7 @@
 ::Files starting with # will not be copied to your output dir
 ::Use this to write development notes or have files that you don't want included in a release
 
-@echo off
+::@echo off
 
 ::Set third parameter to 1 to enable DML1 header generation
 ::This is useful if you're not using a $common folder, so DML files can be written in any order.
@@ -46,6 +46,7 @@ EXIT /B
 
 ::Do not include headers for gamesys.dml, since
 ::usually it's automaticlaly applied to a gamesys
+
 if "%~nx1" == "gamesys.dml" (
 	EXIT /B 0
 )
@@ -105,7 +106,7 @@ call :make_out_dir %2
 ::for each feature folder, copy each file to the dest folder, appending if required
 setlocal enableDelayedExpansion
 for /D %%i in ("%~dpnx1\*") do (
-	set "folder_name=%%~nxi"
+	set "folder_name=%%~ni"
 	if "!folder_name:~0,1!" == "#" (
 		echo Skipping ignored feature !folder_name!
 	) else (
@@ -115,8 +116,9 @@ for /D %%i in ("%~dpnx1\*") do (
 			set "file=%%~A"
 			set "ext=%%~xA"
 			set "file=!file:~2!"
+			set "basename=%%~nA"		
+			set first_character=!basename:~0,1!
 			
-			set first_character=!file:~0,1!
 			if NOT "!first_character!" == "#" (
 				if !ext! == .dml (
 					call :populate_headers "%~dpnx2\!file!" "%~3" "%~4" "%~5" "%~6" "%~7" "%~8" "%~9"
@@ -186,8 +188,9 @@ for /D %%i in ("%~dpnx1\*") do (
 				set "file=%%~A"
 				set "ext=%%~xA"
 				set "file=!file:~2!"
+				set "basename=%%~nA"
+				set first_character=!basename:~0,1!
 				
-				set first_character=!file:~0,1!
 				if NOT "!first_character!" == "#" (
 					md "%~dpnx2\%%~ni\!file!\.." 2>NUL
 					
