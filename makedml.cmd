@@ -11,7 +11,7 @@
 if "%1" == "-f" (
 	call :make_features %2 %3 %4 %5 %6 %7 %8 %9
 ) else if "%1" == "-v" (
-	call :make_versions %2 %3
+	call :make_versions %2 %3 %4 %5 %6 %7 %8 %9
 ) else (
 	echo MakeDML version 0.1
 	echo:
@@ -19,7 +19,7 @@ if "%1" == "-f" (
 	echo for feature mode
 	echo 	%~nx0 -f $source_dir $destination_dir [$headers1] [$headers2] [$headers3] [$headers4]...
 	echo or for version mode
-	echo 	%~nx0 -v $source_dir $destination_dir
+	echo 	%~nx0 -v $source_dir $destination_dir [$headers1] [$headers2] [$headers3] [$headers4]...
 	echo:
 	echo Feature Mode:
 	echo The structure of each subfolder of $source_dir will be copied into $destination_dir in sequence.
@@ -29,9 +29,13 @@ if "%1" == "-f" (
 	echo See the "headers" folder for examples
 	echo.
 	echo Version Mode:
-	echo For each subfolder of $source_dir, the contents of $common will be copied into a new subfolder in $destination_dir.
-	echo Then, the contents of the subfolder in $source_dir will be added to the equivalent subfolder in $destination_dir.
-	echo Files that exist in both folders will be concatenated together with a new line.
+	echo Each subfolder of $source_dir will be made independently into a separate version of the project,
+	echo as if feature mode was run for that subfolder.
+	echo Additionally, the contents of the $common version folder will be added to each version of the mod before building.
+	echo You may also use $core instead of $common, which will also be added to each version of the mod but will additionally
+	echo be built as a standalone version as well. This is useful for versions of the mod with "addons" integrated, so to speak.
+	echo Lastly, by using $main, you can build a version which will inherit the base folder name only, rather than using the
+	echo standard "Folder Name - Version" syntax, which is useful for making "main" mods and then adding "addons" to them
 	echo.
 	echo Usage example: Build DML files in feature mode with DML1 headers, as well as SCP and Vanilla fingerprints:
 	echo 	%~nx0 -f "<project>\src" "<project>\out" "vanilla" "scp"
@@ -46,7 +50,6 @@ EXIT /B
 
 ::Do not include headers for gamesys.dml, since
 ::usually it's automaticlaly applied to a gamesys
-
 if "%~nx1" == "gamesys.dml" (
 	EXIT /B 0
 )
@@ -61,13 +64,16 @@ if exist "%~dp0headers\%~2\%~nx1" (
 	echo.>> "%~1"
 	type "%~dp0headers\%~2\%~nx1" >> "%~1"
 )
+
 EXIT /B 0
 
-:populate_headers
 ::Create DML1 headers
+:populate_headers
 if not exist "%~1" (
 	::echo new DML file - writing DML1 header
 	echo 	-- Writing DML Header to new file %~1
+	
+	::No headers specified in command line, do nothing as no auto generation should happen
 	if NOT "%~2%~3%~4%~5%~6%~7%~8" == "" (
 		echo|set /p="DML1"> "%~1"
 	)
@@ -81,29 +87,17 @@ if not exist "%~1" (
 )
 EXIT /B 0
 
-:make_out_dir
 ::recreate output directory
+:make_out_dir
 ::echo %~dpnx1
 rmdir /s /q "%~dpnx1" 2>NUL
 mkdir "%~dpnx1"
 echo Outputting to %~dpnx1
 EXIT /B 0
 
-:make_features
-::MAKE FEATURES
-::Designed for when you have a complicated mod with many features
-::Simply place each feature into it's own folder, it becomes it's own foldeer structure
-::Each feature folder will be combined in the output folder into a single folder structure,
-::with overlapping files being combined.
-:: 1. Iterate through each feature folder
-:: 2. Write all the files from each to the destination, appending each time (not overwriting)
-:: 3. Fix DML headers (ensure one is at the top of each dml file) if DML header generation is enabled
-set back=%cd%
-
-::remake output dir
-call :make_out_dir %2
 
 ::for each feature folder, copy each file to the dest folder, appending if required
+:make_feature_folder
 setlocal enableDelayedExpansion
 for /D %%i in ("%~dpnx1\*") do (
 	set "folder_name=%%~ni"
@@ -141,74 +135,74 @@ for /D %%i in ("%~dpnx1\*") do (
 	)
 )
 endlocal
+EXIT /B 0
+
+::MAKE FEATURES
+::Designed for when you have a complicated mod with many features
+::Simply place each feature into it's own folder, it becomes it's own foldeer structure
+::Each feature folder will be combined in the output folder into a single folder structure,
+::with overlapping files being combined.
+:: 1. Iterate through each feature folder
+:: 2. Write all the files from each to the destination, appending each time (not overwriting)
+:: 3. Fix DML headers (ensure one is at the top of each dml file) if DML header generation is enabled
+:make_features
+
+set back=%cd%
+
+::remake output dir
+call :make_out_dir %2
+
+call :make_feature_folder %1 %2 %3 %4 %5 %6 %7 %8 %9
 
 cd %back%
 EXIT /B 0
-
 
 :make_versions
 ::MAKE VERSIONS
 ::Designed for when you have a mod with a common codebase
 ::but should generate multiple versions which should all be slightly different
-::Versioning allows you to create a $common folder, the contents of which will appear in all versions
-::then you can put only the differences in each folder, and it will generate
+::Version folders appear above feature folders
+::All version folder will be treated as if feature mode was run for that version,
+::But will also contain all the folders from the $common folder
+::Running in version mode will create
 ::a complete package for each version
 :: 1. Create a copy of each src folder in the destination
-:: 2. Write the files from the _common folder to each folder
+:: 2. Write the files from the $common folder to each folder
 :: 3. Write all the files from each src to it's destination folder, appending each time (not overwriting)
 set back=%cd%
 
 ::remake output dir
 call :make_out_dir %2
 
-::for each version folder, copy over the $common folder first, and then copy across that versions files
 setlocal enableDelayedExpansion
 for /D %%i in ("%~dpnx1\*") do (
 	
-	set "folder_name=%%~nxi"
+	set "folder_name=%%~ni"
+	
 	if "!folder_name:~0,1!" == "#" (
-		echo Skipping version !folder_name!
-	) else (		
-		if NOT %%~ni == $common (
-		
-			echo Creating Version %%~ni
-		
-			::create version dir
-			md "%~dpnx2\%%~ni" 2>NUL
-			
-			::copy over $common stuff
-			if exist "%~dpnx1\$common" (
-				echo 	-- Copying files from $common into new version folder
-				::xcopy /V /E /I "%~dpnx1\$common" "%~dpnx2\%%~ni" >NUL
-				robocopy "%~dpnx1\$common" "%~dpnx2\%%~ni" /E /XF "#*" /XF "#*" /XD "#*" >NUL
-			)
-			
-			::This is some hacked together magic
-			for /f "delims=" %%A in ('forfiles /P "%%i" /s /m *.* /c "cmd /c echo @relpath"') do (
-				set "file=%%~A"
-				set "ext=%%~xA"
-				set "file=!file:~2!"
-				set "basename=%%~nA"
-				set first_character=!basename:~0,1!
-				
-				if NOT "!first_character!" == "#" (
-					md "%~dpnx2\%%~ni\!file!\.." 2>NUL
-					
-					if exist "%~dpnx2\%%~ni\!file!" (
-						echo 	-- Appending to file !file! !dml!
-						echo.>> "%~dpnx2\!file!"
-						echo.>> "%~dpnx2\!file!"
-					) else (
-						echo 	-- Writing new file !file! !dml!
-					)
-					
-					type "%%i\!file!" >> "%~dpnx2\%%~ni\!file!"
-				) else (
-					echo 	-- Skipping file !file!
-				)
-			)
-		)
+		echo Skipping ignored version !folder_name!
 	)
+	if "!folder_name!" == "$common" (
+		echo Skipping common version folder !folder_name!
+	) else if "!folder_name!" == "$core" (
+		echo "Making core version..."
+		mkdir "%~nx2\%%~nxi"
+		call :make_feature_folder "%~nx1\%%~nxi" "%~nx2\%%~nxi" %3 %4 %5 %6 %7 %8 %9
+	) else (
+		echo "Making version !folder_name!..."
+		mkdir "%~nx2\%%~nxi"
+		
+		if exist "%~dpnx1\$common" (
+			call :make_feature_folder "%~nx1\$common" "%~nx2\%%~nxi" %3 %4 %5 %6 %7 %8 %9
+		)
+		
+		if exist "%~dpnx1\$core" (
+			call :make_feature_folder "%~nx1\$core" "%~nx2\%%~nxi" %3 %4 %5 %6 %7 %8 %9
+		)
+		
+		call :make_feature_folder "%~nx1\%%~nxi" "%~nx2\%%~nxi" %3 %4 %5 %6 %7 %8 %9
+	)
+	
 )
 endlocal
 
