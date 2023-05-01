@@ -39,9 +39,9 @@ if "%1" == "-f" (
 	echo.
 	echo Each subfolder of $source_dir will be made independently into a separate version of the project,
 	echo as if feature mode was run for that subfolder.
-	echo Additionally, the contents of the $common version folder will be added to each version of the mod before building.
-	echo You may also use $core instead of $common, which will also be added to each version of the mod but will additionally
-	echo be built as a standalone version as well. This is useful for versions of the mod with "addons" integrated, so to speak.
+	echo Additionally, the contents of the $common and $core version folders will be added to each version of the mod before building.
+	echo The main difference is that $common will not be made as a standalone version, but $core will.
+	echo Any version directories starting with "$" will be built standalone and will not have the contents of $common or $core added
 	echo.
 	echo.
 	echo Zip Mode ^(-z, then -f or -v^):
@@ -55,6 +55,7 @@ if "%1" == "-f" (
 	echo in the current directory.
 	echo When building Version mode, any directory named $core or $main will use only
 	echo the mod name, not the version name for their zip ^("$modname.7z"^)
+	echo Additionally, any starting "$" characters will be removed from version suffixes.
 	echo.
 	echo Usage example: Build DML files in feature mode with DML1 headers, as well as SCP and Vanilla fingerprints:
 	echo 	%~nx0 -f "<project>\src" "<project>\out" "vanilla" "scp"
@@ -80,12 +81,19 @@ if "%1" == "-f" (
 	
 	setlocal enableDelayedExpansion
 		for /D %%i in ("%~dpn2\*") do (
+		
+			rem Set the version name, but we need to remove the trailing "$" if it exists
+			set "version_name=%%~ni"
+			if "!version_name:~0,1!" == "$" (
+				set "version_name=!version_name:~1!"
+			)
+			
 			if "%%~ni" == "$core" (
-				7z a ".\zips\%3~.7z" "%%~i\*"
+				7z a ".\zips\%~3.7z" "%%~i\*"
 			) else if "%%~ni" == "$main" (
 				7z a ".\zips\%~3.7z" "%%~i\*"
 			) else (
-				7z a ".\zips\%~3 - %%~ni.7z" "%%~i\*"
+				7z a ".\zips\%~3 - !version_name!.7z" "%%~i\*"
 			)
 		)
 	endlocal
@@ -157,26 +165,35 @@ for /D %%i in ("%~dpnx1\*") do (
 			set "file=%%~A"
 			set "ext=%%~xA"
 			set "file=!file:~2!"
+			set "outfile=!file!"
 			set "basename=%%~nA"		
 			set first_character=!basename:~0,1!
 			
+			rem Delete existing file in output if we are set to "replace"
+			if "!first_character!" == "$" (
+				set "delfile=!file:~1!"
+				set "outfile=!file:~1!"
+				echo 	-- File %%~nxA is set to overwrite^^!
+				@del "%~dpnx2\!delfile!" 2>NUL
+			)
+			
 			if NOT "!first_character!" == "#" (
 				if !ext! == .dml (
-					call :populate_headers "%~dpnx2\!file!" "%~3" "%~4" "%~5" "%~6" "%~7" "%~8" "%~9"
+					call :populate_headers "%~dpnx2\!outfile!" "%~3" "%~4" "%~5" "%~6" "%~7" "%~8" "%~9"
 				)
-				md "%~dpnx2\!file!\.." 2>NUL
+				md "%~dpnx2\!outfile!\.." 2>NUL
 				
-				if exist "%~dpnx2\!file!" (
-					echo 	-- Appending to file !file! !dml!
-					echo.>> "%~dpnx2\!file!"
-					echo.>> "%~dpnx2\!file!"
+				if exist "%~dpnx2\!outfile!" (
+					echo 	-- Appending to file !outfile! !dml!
+					echo.>> "%~dpnx2\!outfile!"
+					echo.>> "%~dpnx2\!outfile!"
 				) else (
-					echo 	-- Writing new file !file! !dml!
+					echo 	-- Writing new file !outfile! !dml!
 				)
 				
-				type "%%i\!file!" >> "%~dpnx2\!file!"
+				type "%%i\!file!" >> "%~dpnx2\!outfile!"
 			) else (
-				echo 	-- Skipping file !file!
+				echo 	-- Skipping file !outfile!
 			)
 		)
 	)
@@ -224,28 +241,27 @@ call :make_out_dir %2
 setlocal enableDelayedExpansion
 for /D %%i in ("%~dpnx1\*") do (
 	
-	set "folder_name=%%~ni"
-	set "first_character="!folder_name:~0,1!"
-	
-	if "!first_character!" == "#" (
+	set "folder_name=%%~ni"	
+	if "!folder_name:~0,1!" == "#" (
 		echo Skipping ignored version !folder_name!
 	)
 	if "!folder_name!" == "$common" (
 		echo Skipping common version folder !folder_name!
-	) else if "!folder_name!" == "$core" (
-		echo "Making core version..."
-		mkdir "%~nx2\%%~nxi"
-		call :make_feature_folder "%~nx1\%%~nxi" "%~nx2\%%~nxi" %3 %4 %5 %6 %7 %8 %9
 	) else (
 		echo Making version !folder_name!...
 		mkdir "%~nx2\%%~nxi"
 		
-		if exist "%~dpnx1\$common" (
-			call :make_feature_folder "%~nx1\$common" "%~nx2\%%~nxi" %3 %4 %5 %6 %7 %8 %9
-		)
+		if "!folder_name:~0,1!" == "$" (
+			echo 	-- Version is standalone, not adding $common or $core folders...
+		) else (
 		
-		if exist "%~dpnx1\$core" (
-			call :make_feature_folder "%~nx1\$core" "%~nx2\%%~nxi" %3 %4 %5 %6 %7 %8 %9
+			if exist "%~dpnx1\$common" (
+				call :make_feature_folder "%~nx1\$common" "%~nx2\%%~nxi" %3 %4 %5 %6 %7 %8 %9
+			)
+			
+			if exist "%~dpnx1\$core" (
+				call :make_feature_folder "%~nx1\$core" "%~nx2\%%~nxi" %3 %4 %5 %6 %7 %8 %9
+			)
 		)
 		
 		call :make_feature_folder "%~nx1\%%~nxi" "%~nx2\%%~nxi" %3 %4 %5 %6 %7 %8 %9
