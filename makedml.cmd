@@ -12,39 +12,86 @@ if "%1" == "-f" (
 	call :make_features %2 %3 %4 %5 %6 %7 %8 %9
 ) else if "%1" == "-v" (
 	call :make_versions %2 %3 %4 %5 %6 %7 %8 %9
+) else if "%1" == "-z" (
+	call :zip %2 %3 %4
 ) else (
 	echo MakeDML version 0.1
 	echo:
-	echo usage:
+	echo Usage:
 	echo for feature mode
 	echo 	%~nx0 -f $source_dir $destination_dir [$headers1] [$headers2] [$headers3] [$headers4]...
 	echo or for version mode
 	echo 	%~nx0 -v $source_dir $destination_dir [$headers1] [$headers2] [$headers3] [$headers4]...
+	echo or for zip mode
+	echo 	%~nx0 -z ^(-v or -f^) $destination_dir $modname
 	echo:
-	echo Feature Mode:
+	echo.
+	echo Feature Mode ^(-f^):
+	echo.
 	echo The structure of each subfolder of $source_dir will be copied into $destination_dir in sequence.
 	echo Files that exist in multiple folders will be concatenated together with a new line.
 	echo After this, add an optional list of dml headers to add, based on folder name.
 	echo Adding headers will also add the DML1 header automatically
 	echo See the "headers" folder for examples
 	echo.
-	echo Version Mode:
+	echo.
+	echo Version Mode ^(-v^):
+	echo.
 	echo Each subfolder of $source_dir will be made independently into a separate version of the project,
 	echo as if feature mode was run for that subfolder.
 	echo Additionally, the contents of the $common version folder will be added to each version of the mod before building.
 	echo You may also use $core instead of $common, which will also be added to each version of the mod but will additionally
 	echo be built as a standalone version as well. This is useful for versions of the mod with "addons" integrated, so to speak.
-	echo Lastly, by using $main, you can build a version which will inherit the base folder name only, rather than using the
-	echo standard "Folder Name - Version" syntax, which is useful for making "main" mods and then adding "addons" to them
+	echo.
+	echo.
+	echo Zip Mode ^(-z, then -f or -v^):
+	echo.
+	echo If zip mode is run with -f, the contents of the specified $destination_dir will be zipped
+	echo using the specified $modname as "$modname.7z"
+	echo in the current directory
+	echo If zip mode is run with -v, each subfolder of the specified $destination_dir will be zipped
+	echo into "$modname - ^<version name^>.7z" and placed in a zips folder in the current directory
+	echo using the specified $modname as $modname.7z
+	echo in the current directory.
+	echo When building Version mode, any directory named $core or $main will use only
+	echo the mod name, not the version name for their zip ^("$modname.7z"^)
 	echo.
 	echo Usage example: Build DML files in feature mode with DML1 headers, as well as SCP and Vanilla fingerprints:
 	echo 	%~nx0 -f "<project>\src" "<project>\out" "vanilla" "scp"
-	pause
 )
 
 EXIT /B
 
 ::FUNCTIONS
+
+:zip
+
+if "%~3" == "" (
+	echo zip: Invalid mod name specified: "%~3"
+	EXIT /B 0
+)
+
+if "%1" == "-f" (
+	@del "%~3.7z"
+	7z a "%~3.7z" "%~dpn2\*"
+) else if "%1" == "-v" (
+	rmdir /s /q ".\zips" 2>NUL
+	mkdir ".\zips"
+	
+	setlocal enableDelayedExpansion
+		for /D %%i in ("%~dpn2\*") do (
+			if "%%~ni" == "$core" (
+				7z a ".\zips\%3~.7z" "%%~i\*"
+			) else if "%%~ni" == "$main" (
+				7z a ".\zips\%~3.7z" "%%~i\*"
+			) else (
+				7z a ".\zips\%~3 - %%~ni.7z" "%%~i\*"
+			)
+		)
+	endlocal
+)
+
+EXIT /B 0
 
 :populate_header
 
@@ -71,7 +118,7 @@ EXIT /B 0
 :populate_headers
 if not exist "%~1" (
 	::echo new DML file - writing DML1 header
-	echo 	-- Writing DML Header to new file %~1
+	echo 	-- Writing DML Header to new file %~nx1
 	
 	::No headers specified in command line, do nothing as no auto generation should happen
 	if NOT "%~2%~3%~4%~5%~6%~7%~8" == "" (
@@ -178,8 +225,9 @@ setlocal enableDelayedExpansion
 for /D %%i in ("%~dpnx1\*") do (
 	
 	set "folder_name=%%~ni"
+	set "first_character="!folder_name:~0,1!"
 	
-	if "!folder_name:~0,1!" == "#" (
+	if "!first_character!" == "#" (
 		echo Skipping ignored version !folder_name!
 	)
 	if "!folder_name!" == "$common" (
@@ -189,7 +237,7 @@ for /D %%i in ("%~dpnx1\*") do (
 		mkdir "%~nx2\%%~nxi"
 		call :make_feature_folder "%~nx1\%%~nxi" "%~nx2\%%~nxi" %3 %4 %5 %6 %7 %8 %9
 	) else (
-		echo "Making version !folder_name!..."
+		echo Making version !folder_name!...
 		mkdir "%~nx2\%%~nxi"
 		
 		if exist "%~dpnx1\$common" (
