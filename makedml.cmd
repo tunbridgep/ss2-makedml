@@ -4,16 +4,14 @@
 ::Files starting with # will not be copied to your output dir
 ::Use this to write development notes or have files that you don't want included in a release
 
-::@echo off
+@echo off
 
-::Set third parameter to 1 to enable DML1 header generation
-::This is useful if you're not using a $common folder, so DML files can be written in any order.
 if "%1" == "-f" (
 	call :make_features %2 %3 %4 %5 %6 %7 %8 %9
 ) else if "%1" == "-v" (
 	call :make_versions %2 %3 %4 %5 %6 %7 %8 %9
 ) else if "%1" == "-z" (
-	call :zip %2 %3 %4
+	call :zip %2 %3 %4 %5
 ) else (
 	echo MakeDML version 0.1
 	echo:
@@ -23,15 +21,17 @@ if "%1" == "-f" (
 	echo or for version mode
 	echo 	%~nx0 -v $source_dir $destination_dir [$headers1] [$headers2] [$headers3] [$headers4]...
 	echo or for zip mode
-	echo 	%~nx0 -z ^(-v or -f^) $destination_dir $modname
+	echo 	%~nx0 -z ^(-v or -f^) $destination_dir $modname [$main_file_name]
 	echo:
 	echo.
 	echo Feature Mode ^(-f^):
 	echo.
 	echo The structure of each subfolder of $source_dir will be copied into $destination_dir in sequence.
 	echo Files that exist in multiple folders will be concatenated together with a new line.
+	echo.
 	echo After this, add an optional list of dml headers to add, based on folder name.
 	echo Adding headers will also add the DML1 header automatically
+	echo.
 	echo See the "headers" folder for examples
 	echo.
 	echo.
@@ -39,6 +39,7 @@ if "%1" == "-f" (
 	echo.
 	echo Each subfolder of $source_dir will be made independently into a separate version of the project,
 	echo as if feature mode was run for that subfolder.
+	echo.
 	echo Additionally, the contents of the $common and $core version folders will be added to each version of the mod before building.
 	echo The main difference is that $common will not be made as a standalone version, but $core will.
 	echo Any version directories starting with "$" will be built standalone and will not have the contents of $common or $core added
@@ -49,13 +50,22 @@ if "%1" == "-f" (
 	echo If zip mode is run with -f, the contents of the specified $destination_dir will be zipped
 	echo using the specified $modname as "$modname.7z"
 	echo in the current directory
+	echo.
 	echo If zip mode is run with -v, each subfolder of the specified $destination_dir will be zipped
 	echo into "$modname - ^<version name^>.7z" and placed in a zips folder in the current directory
-	echo using the specified $modname as $modname.7z
 	echo in the current directory.
+	echo.
 	echo When building Version mode, any directory named $core or $main will use only
 	echo the mod name, not the version name for their zip ^("$modname.7z"^)
-	echo Additionally, any starting "$" characters will be removed from version suffixes.
+	echo or, if the $main_file_name variable is set, will use ^("$modname - $main_file_name.7z"^)
+	echo.
+	echo In all cases, any starting "$" characters will be removed from version suffixes.
+	echo.
+	echo.
+	echo Additional Notes:
+	echo.
+	echo Any file or folder beginning with the # character will not be copied into the built version
+	echo Use this for creating todos or other files which are relevant to the mod but shouldn't be shipped
 	echo.
 	echo Usage example: Build DML files in feature mode with DML1 headers, as well as SCP and Vanilla fingerprints:
 	echo 	%~nx0 -f "<project>\src" "<project>\out" "vanilla" "scp"
@@ -87,11 +97,19 @@ if "%1" == "-f" (
 			if "!version_name:~0,1!" == "$" (
 				set "version_name=!version_name:~1!"
 			)
-			
+
 			if "%%~ni" == "$core" (
-				7z a ".\zips\%~3.7z" "%%~i\*"
+				if not "%~n4" == "" (
+					7z a ".\zips\%~3 - %~n4.7z" "%%~i\*"
+				) else (
+					7z a ".\zips\%~3.7z" "%%~i\*"
+				)
 			) else if "%%~ni" == "$main" (
-				7z a ".\zips\%~3.7z" "%%~i\*"
+				if not "%~n4" == "" (
+					7z a ".\zips\%~3 - %~n4.7z" "%%~i\*"
+				) else (
+					7z a ".\zips\%~3.7z" "%%~i\*"
+				)
 			) else (
 				7z a ".\zips\%~3 - !version_name!.7z" "%%~i\*"
 			)
